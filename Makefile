@@ -1,4 +1,4 @@
-NAME=fake-bpfdoor.x86
+NAME=fake-bpfdoor.x64
 
 all: $(NAME)
 
