@@ -261,6 +261,12 @@ int main(int ac, char** av) {
         return (unlink(FAKE_PID_FILE));
     }
 
+    int debug = 0;
+    if (ac == 2 && strcmp(av[1], "debug") == 0) {
+        puts("Enabling debug mode...");
+        debug = 1;
+    }
+
     puts("Initializing fake BPFDoor...");
 
     puts("Check if already present...");
@@ -295,19 +301,21 @@ int main(int ac, char** av) {
         perror("chdir");
     }
 
-    puts("Closing fds...");
-    int nullfd = openat(AT_FDCWD, "/dev/null", O_RDWR);
-    if (nullfd < 0) {
-        perror("openat");
-        return (1);
+    if (!debug) {
+        puts("Closing fds...");
+        int nullfd = openat(AT_FDCWD, "/dev/null", O_RDWR);
+        if (nullfd < 0) {
+            perror("openat");
+            return (1);
+        }
+        close(0);
+        close(1);
+        close(2);
+        dup2(nullfd, 0);
+        dup2(nullfd, 1);
+        dup2(nullfd, 2);
+        close(3);
     }
-    close(0);
-    close(1);
-    close(2);
-    dup2(nullfd, 0);
-    dup2(nullfd, 1);
-    dup2(nullfd, 2);
-    close(3);
 
     puts("Create fake pid file...");
     int pidfd = creat(FAKE_PID_FILE, 0644);
